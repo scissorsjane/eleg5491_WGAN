@@ -176,39 +176,38 @@ class DCGAN_G_nobn(nn.Module):
             tisize = tisize * 2
 
         main = nn.Sequential()
-        # input is Z, going into a convolution
-        main.add_module('initial.{0}-{1}.convt'.format(nz, cngf),
-                        nn.ConvTranspose2d(nz, cngf, 4, 1, 0, bias=False))
-        main.add_module('initial.{0}.batchnorm'.format(cngf),
-                        nn.BatchNorm2d(cngf))
-        main.add_module('initial.{0}.relu'.format(cngf),
+        main.add_module('initial.{0}-{1}.convt'.format(nz, 64),
+                        nn.ConvTranspose2d(nz, 64, 4, 1, 0, bias=False))
+        main.add_module('initial.{0}.relu'.format(nc),
                         nn.ReLU(True))
 
         csize, cndf = 4, cngf
+        i=1
         while csize < isize//2:
-            main.add_module('pyramid.{0}-{1}.convt'.format(cngf, cngf//2),
-                            nn.ConvTranspose2d(cngf, cngf//2, 4, 2, 1, bias=False))
-            main.add_module('pyramid.{0}.relu'.format(cngf//2),
+            main.add_module('pyramid.{0}-{1}.convt'.format(i, 64),
+                            nn.ConvTranspose2d(64, 64, 4, 2, 1, bias=False))
+            main.add_module('pyramid.{0}.relu'.format(i),
                             nn.ReLU(True))
             cngf = cngf // 2
             csize = csize * 2
+            i=i+1
 
         # Extra layers
         for t in range(n_extra_layers):
             main.add_module('extra-layers-{0}.{1}.conv'.format(t, cngf),
-                            nn.Conv2d(cngf, cngf, 3, 1, 1, bias=False))
+                            nn.Conv2d(64, 64, 3, 1, 1, bias=False))
             main.add_module('extra-layers-{0}.{1}.relu'.format(t, cngf),
                             nn.ReLU(True))
 
         main.add_module('final.{0}-{1}.convt'.format(cngf, nc),
-                        nn.ConvTranspose2d(cngf, nc, 4, 2, 1, bias=False))
+                        nn.ConvTranspose2d(64, nc, 4, 2, 1, bias=False))
         main.add_module('final.{0}.tanh'.format(nc),
                         nn.Tanh())
         self.main = main
 
     def forward(self, input):
         if isinstance(input.data, torch.cuda.FloatTensor) and self.ngpu > 1:
-            output = nn.parallel.data_parallel(self.main, input, range(self.ngpu))
+            output = nn.parallel.data_parallel(self.main, input,  range(self.ngpu))
         else: 
             output = self.main(input)
         return output 
@@ -377,29 +376,31 @@ class WGAN_G_nobn(nn.Module):
             tisize = tisize * 2
 
         main = nn.Sequential()
-        main.add_module('initial.{0}-{1}.convt'.format(nz, cngf),
-                        nn.ConvTranspose2d(nz, cngf, 4, 1, 0, bias=False))
-        main.add_module('initial.{0}.relu'.format(cngf),
+        main.add_module('initial.{0}-{1}.convt'.format(nz, 64),
+                        nn.ConvTranspose2d(nz, 64, 4, 1, 0, bias=False))
+        main.add_module('initial.{0}.relu'.format(nc),
                         nn.ReLU(True))
 
         csize, cndf = 4, cngf
+        i=1
         while csize < isize//2:
-            main.add_module('pyramid.{0}-{1}.convt'.format(cngf, cngf//2),
-                            nn.ConvTranspose2d(cngf, cngf//2, 4, 2, 1, bias=False))
-            main.add_module('pyramid.{0}.relu'.format(cngf//2),
+            main.add_module('pyramid.{0}-{1}.convt'.format(i, 64),
+                            nn.ConvTranspose2d(64, 64, 4, 2, 1, bias=False))
+            main.add_module('pyramid.{0}.relu'.format(i),
                             nn.ReLU(True))
             cngf = cngf // 2
             csize = csize * 2
+            i=i+1
 
         # Extra layers
         for t in range(n_extra_layers):
-            main.add_module('extra-layers-{0}.{1}.conv'.format(t, cngf),
-                            nn.Conv2d(cngf, cngf, 3, 1, 1, bias=False))
-            main.add_module('extra-layers-{0}.{1}.relu'.format(t, cngf),
+            main.add_module('extra-layers-{0}.{1}.conv'.format(t, 64),
+                            nn.Conv2d(16, 16, 3, 1, 1, bias=False))
+            main.add_module('extra-layers-{0}.{1}.relu'.format(t, 64),
                             nn.ReLU(True))
 
-        main.add_module('final.{0}-{1}.convt'.format(cngf, nc),
-                        nn.ConvTranspose2d(cngf, nc, 4, 2, 1, bias=False))
+        main.add_module('final.{0}-{1}.convt'.format(64, nc),
+                        nn.ConvTranspose2d(64, nc, 4, 2, 1, bias=False))
         main.add_module('final.{0}.tanh'.format(nc),
                         nn.Tanh())
         self.main = main
