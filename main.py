@@ -181,10 +181,14 @@ print(netG)
 #if opt.mlp_D:
 #    netD = mlp.MLP_D(opt.imageSize, nz, nc, ndf, ngpu)
 if opt.WGAN:
+   
     netD = dcgan.WGAN_D(opt.imageSize, nz, nc, ngf, ngpu, n_extra_layers)
 
+
 else:
+   
     netD = dcgan.DCGAN_D(opt.imageSize, nz, nc, ngf, ngpu, n_extra_layers)
+
 
     
 netD.apply(weights_init) ##???????
@@ -234,6 +238,7 @@ errG_list=[]
 errD_real_list=[]
 errD_fake_list=[]
 errD_w_list=[]
+W_estimate=[]
 for epoch in range(opt.niter):
     data_iter = iter(dataloader)
     #print('here1')
@@ -354,8 +359,12 @@ for epoch in range(opt.niter):
         errG_list.append(errG.data[0])
         errD_real_list.append(errD_real.data[0])
         errD_fake_list.append(errD_fake.data[0])
-        if not opt.WGAN:
-            errD_w_list.append(errD_w.data[0])
+        #if not opt.WGAN:
+        #    errD_w_list.append(errD_w.data[0])
+        if opt.WGAN:
+            W_estimate.append(-errD.data[0])
+        else:
+            W_estimate.append(-errD_w.data[0])
     
 
         if opt.WGAN:
@@ -378,15 +387,34 @@ for epoch in range(opt.niter):
                 vutils.save_image(fake.data, '{0}/fake_samples_{1}.png'.format(opt.experiment, gen_iterations))
             else:
                 fake = netG(fixed_noisev)
-                #fake.data = fake.data.mul(0.5).add(0.5)
+                fake.data = fake.data.mul(0.5).add(0.5)
                 print (fake.data)
                 vutils.save_image(fake.data, '{0}/fake_samples_{1}.png'.format(opt.experiment, gen_iterations))
+            print('plot training curve')
+            plt.figure(figsize=(16,12),dpi=98)
+            x = np.arange(0,gen_iterations)
+            plt.subplot(311)
+            plt.xlabel('iteration')
+            plt.ylabel('Loss_D')
+            plt.plot(x,errD_list,"g",label='errD',linewidth=2)
+            plt.subplot(312)
+            plt.plot(x,errG_list,"b",label='errG',linewidth=2)
+            plt.xlabel('iteration')
+            plt.ylabel('Loss_G')
+            plt.subplot(313)
+            plt.plot(x,W_estimate,"r",label='Wassertein Estimate',linewidth=2)
+            plt.xlabel('iteration')
+            plt.ylabel('Wassertein Estimate')
+            #y = np.random.randn(60)
+    
+            out_png =  '{0}/loss.png'.format(opt.experiment)
+            plt.savefig(out_png, dpi=150)
 
     # do checkpointing
-    torch.save(netG.state_dict(), '{0}/netG_epoch_{1}.pth'.format(opt.experiment, epoch))
-    torch.save(netD.state_dict(), '{0}/netD_epoch_{1}.pth'.format(opt.experiment, epoch))
+    #torch.save(netG.state_dict(), '{0}/netG_epoch_{1}.pth'.format(opt.experiment, epoch))
+    #torch.save(netD.state_dict(), '{0}/netD_epoch_{1}.pth'.format(opt.experiment, epoch))
 
-
+"""
 print('plot training curve')
 plt.figure(figsize=(16,12),dpi=98)
 x = np.arange(0,gen_iterations)
@@ -426,3 +454,4 @@ plt.ylabel('Wassertein Estimate')
 out_png =  '{0}/loss.png'.format(opt.experiment)
 plt.savefig(out_png, dpi=150)
 
+"""
